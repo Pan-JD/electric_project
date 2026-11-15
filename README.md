@@ -186,8 +186,9 @@ bash code/yolo/train_background.sh configs/train_scored_labels.json
 ```
 
 ### 本地查看纯图像评分，继续复用现有网页：
+```bash
 python -B code/review_dataset_quality.py --results "run_results/quality_full_640_noocr_20261104" --quality-scores "electronic_data/quality_scores_v2"
-
+```
 
 
 
