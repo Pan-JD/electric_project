@@ -1,0 +1,39 @@
+{
+  "input": "/mnt/data/panjinduo/datasets/electronic_data/sample_original_named_seed42",
+  "input_layout": "named",
+  "output": "/mnt/data/panjinduo/datasets/electronic_data/sample_filter_v1_hard_named_seed42",
+  "original_output": "/mnt/data/panjinduo/datasets/electronic_data/sample_original_named_seed42",
+  "original_split_output": "datasets/original_full",
+  "classes": [
+    "aqmzc",
+    "fhz_f",
+    "fhz_h",
+    "jyz_pl",
+    "jyz_zc",
+    "wcaqm"
+  ],
+  "workers": 24,
+  "storage": {
+    "original_images": "copy",
+    "filtered_images": "copy"
+  },
+  "hard_filter": {
+    "min_side": 200,
+    "tiny_model_side": 4,
+    "max_box_fraction": 0.9,
+    "imgsz": 640
+  },
+  "near_duplicates": {
+    "enabled": false,
+    "action": "record",
+    "max_candidates": 200
+  },
+  "split": {
+    "output": "datasets/filtered_hard_v1",
+    "seeds": [
+      42
+    ],
+    "val_fraction": 0.2
+  },
+  "reuse_metrics_from": null
+}

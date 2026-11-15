@@ -1,0 +1,26 @@
+{
+  "data": "datasets/scored_filtered_v2/seed_42/data.yaml",
+  "model": "models/yolo26n.pt",
+  "output": "outputs/train_scored_filtered_v2_seed42_gpu1_batch256_20261114",
+  "parameters": {
+    "epochs": 200,
+    "imgsz": 640,
+    "batch": 256,
+    "device": "3",
+    "workers": 5,
+    "seed": 42,
+    "optimizer": "SGD",
+    "lr0": 0.01,
+    "patience": 0,
+    "amp": true,
+    "deterministic": true,
+    "cache": false,
+    "val": true
+  },
+  "prefetch_factor": 2,
+  "environment": {
+    "NCCL_P2P_DISABLE": "1",
+    "TORCH_NCCL_BLOCKING_WAIT": "0"
+  },
+  "log_interval_seconds": 30
+}

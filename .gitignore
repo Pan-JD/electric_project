@@ -1,0 +1,82 @@
+# 模型与文档
+models/**
+Docs/**
+assets/**
+
+# 数据、评分结果、训练结果和临时归档
+/datasets/
+/electronic_data/
+/run_results/
+/results/
+/outputs/
+/logs/
+/tmp/
+runs/
+wandb/
+mlruns/
+
+# 模型只保留 models/ 下的部署与预训练文件
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.safetensors
+
+
+# Python环境和运行缓存
+__pycache__/
+*.py[cod]
+.venv/
+.venv_quality/
+venv/
+.conda/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# 日志、运行数据库和未完成文件
+*.log
+*.pid
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.cache
+*.part
+*.tmp
+*.bak
+
+# 本机编辑器设置及环境变量
+.vscode/
+.idea/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+~$*
+
+# 数据传输压缩包
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+
+# Docs中的结果报表与示例图片；保留标签表及说明文档
+/Docs/展示文档/
+/Docs/标注问题图片/
+/Docs/issues.csv
+/Docs/issues.xlsx
+/Docs/label_counts.csv
+/Docs/label_counts.xlsx
+/Docs/summary.csv
+/Docs/summary.xlsx

@@ -1,0 +1,8 @@
+{
+  "scores": "electronic_data/quality_scores_v2",
+  "reports": "electronic_data/score_filter_v2",
+  "split_output": "datasets/scored_filtered_v2/seed_42",
+  "minimum_scores": {
+    "图像质量分": 2.5
+  }
+}

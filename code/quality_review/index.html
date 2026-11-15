@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>数据质量复核</title>
+  <link rel="stylesheet" href="/review.css">
+  <script src="/review.js" defer></script>
+</head>
+<body>
+  <header><div><div class="eyebrow">DATASET REVIEW</div><h1>数据质量复核</h1><p id="source">正在读取扫描结果…</p></div><span class="local">本地复核</span></header>
+  <section id="overview" class="overview" aria-label="数据概况"></section>
+  <section class="workspace">
+    <aside>
+      <div class="filter-title"><h2>筛选图片</h2><span id="classCount"></span></div>
+      <form id="filters">
+        <label>类别<select id="classFilter"><option value="">全部类别</option></select></label>
+        <div class="problem-filter">
+          <label>问题类型<select id="issueFilter"><option value="">不限问题（按样本范围）</option></select></label>
+          <div id="scoreControls" class="score-controls" hidden>
+            <label id="scoreModeLabel" hidden>评分视图<select id="scoreMode"><option value="compare">改进前后对比</option><option value="before">改进前评分</option><option value="after">改进后评分</option></select></label>
+            <div id="scoreChangeControls" hidden>
+              <label>变化方向<select id="scoreChange"><option value="paired">两版均有评分</option><option value="changed">分数有变化</option><option value="down">降分</option><option value="up">升分</option><option value="same">分数不变</option><option value="before_only">仅改进前有评分</option><option value="after_only">仅改进后有评分</option><option value="any">任一版本有评分</option></select></label>
+              <div class="score-range"><label>改进前<select id="beforeScore"><option value="">不限分数</option><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label><label>改进后<select id="afterScore"><option value="">不限分数</option><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label></div>
+            </div>
+            <label>标注一致性评分<select id="scoreFilter" disabled><option value="scored">全部已评分样本</option></select></label>
+            <p id="scoreSummary" class="score-summary">未加载大模型评分。</p>
+            <label>叠加原扫描问题（可选）<select id="scoreIssueFilter"><option value="">不限原扫描问题</option></select></label>
+          </div>
+        </div>
+        <label>样本范围<select id="population"><option value="reported">原扫描问题样本</option><option value="all">全部样本（含未触发规则）</option></select></label>
+        <label>文件名或路径<input id="search" placeholder="输入关键词后按回车" autocomplete="off"></label>
+        <details id="qualityScoreControls" class="threshold-dropdown" hidden>
+          <summary>图像与综合评分筛选</summary>
+          <div class="thresholds">
+            <label>评分指标<select id="qualityField"><option value="">不限评分</option></select></label>
+            <div class="score-range"><label>最低分<input id="qualityMin" type="number" min="0" max="5" step="any" value="0"></label><label>最高分<input id="qualityMax" type="number" min="0" max="5" step="any" value="5"></label></div>
+            <label>综合评分覆盖率<select id="qualityCoverage"><option value="0">不限</option><option value="50">至少50%</option><option value="100">100%，全部评分完成</option></select></label>
+            <p id="qualityImportSummary" class="threshold-help"></p>
+          </div>
+        </details>
+        <details id="thresholdDropdown" class="threshold-dropdown">
+          <summary><span>指标阈值筛选</span><span id="thresholdSummary" class="filter-badge">未设置</span></summary>
+          <div class="thresholds">
+          <label>指标区域<select id="metricScope"><option value="target">目标区域（按当前类别）</option><option value="image">整图</option></select></label>
+          <label>平均灰度（0–255）<select id="grayMode"><option value="below">低于</option><option value="above">高于</option><option value="inside">区间内（含边界）</option><option value="outside">区间外</option></select></label>
+          <div class="gray-inputs"><label id="grayLowGroup" hidden><span id="grayLowLabel">下限</span><input id="grayLow" type="number" min="0" max="255" step="any" placeholder="不限"></label><label id="grayHighGroup"><span id="grayHighLabel">阈值</span><input id="grayHigh" type="number" min="0" max="255" step="any" placeholder="例如 30"></label></div>
+          <label>拉普拉斯方差低于<input id="laplacianMax" type="number" min="0" step="any" placeholder="例如 20；留空不限"></label>
+          <label>梯度能量低于（Tenengrad）<input id="tenengradMax" type="number" min="0" step="any" placeholder="例如 300；留空不限"></label>
+          <p class="threshold-help">多个阈值须由同一区域同时满足；一张图有一个目标满足即命中。灰度低于、高于、区间外及清晰度上限均不含边界。</p>
+          <p class="threshold-help">目标区域使用有效框的已有指标；选择类别时仅匹配该类别目标。放宽阈值查找原扫描未命中的图片，请将样本范围改为“全部样本”，问题保持“不限问题”。</p>
+          <button id="resetThresholds" type="button">清空指标阈值</button>
+          </div>
+        </details>
+        <button class="primary" type="submit">应用筛选</button>
+      </form>
+      <p class="threshold-help">首次应用阈值时建立缓存索引，后续复用。顶部和下方统计为原扫描结果。</p>
+      <details class="statistics-dropdown" open>
+      <summary>原扫描统计</summary>
+      <p id="scope" class="scope"></p>
+      <div id="stats" class="stats"></div>
+      </details>
+      <div class="help"><b>计数口径</b><p>各类按包含该类别的图片统计。总体合并相同文件主名、图片内容和标注的归档副本。文件主名或标注版本不同的图片分别保留。</p><p>原始问题清单按问题逐条记录，同一组图片/XML 可出现多行。核算筛除样本数时，需先合并对应图片与 XML，再对样本去重。</p><p>对照中的橙色框表示该版本独有的类别或坐标，青色框表示共有标注。</p></div>
+    </aside>
+    <main>
+      <section id="scoreComparisonSummary" class="score-comparison-summary" hidden></section>
+      <div class="list-heading"><div><h2 id="listTitle">问题图片</h2><p id="listNote">按需加载图片与标注</p></div><div class="pager"><button id="previous" disabled>上一页</button><span id="page">第 1 页</span><button id="next" disabled>下一页</button></div></div>
+      <div id="message" role="status"></div>
+      <div id="cards" class="cards"></div>
+      <div id="empty" class="empty" hidden>当前条件下没有匹配样本；可切换指标区域、样本范围或调整阈值。</div>
+    </main>
+  </section>
+  <dialog id="reviewDialog">
+    <div class="dialog-heading"><div><span class="eyebrow">IMAGE INSPECTION</span><h2 id="detailTitle">图片复核</h2></div><button id="closeDialog" aria-label="关闭">关闭 ×</button></div>
+    <div class="dialog-toolbar"><label><input id="showBoxes" type="checkbox" checked>显示标注框</label><label><input id="onlyClass" type="checkbox">仅显示筛选类别的框</label><label>方向<select id="frame"><option value="scan">扫描使用的方向</option><option value="encoded">编码像素方向</option><option value="display">EXIF 显示方向（沿用原坐标叠框）</option></select></label></div>
+    <p id="frameNotice" class="notice" hidden></p>
+    <p id="thresholdNotice" class="notice" hidden></p>
+    <div class="inspection">
+      <section class="image-panel"><h3>当前样本</h3><div id="primaryImage"></div><div id="primaryInfo" class="file-info"></div></section>
+      <section class="image-panel" id="comparisonPanel" hidden><h3 id="comparisonTitle">对照样本</h3><div id="comparisonImage"></div><div id="comparisonInfo" class="file-info"></div></section>
+    </div>
+    <section id="qualityMetricSection" class="evidence"><h3>已保存的图像指标</h3><p id="metricScaleNote" class="threshold-help"></p><div id="qualityMetrics" class="metric-table-wrap"></div></section>
+    <section id="totalScoreSection" class="evidence" hidden><h3>图像与综合评分</h3><p class="threshold-help">评分来自S5硬筛样本；当前图像和框沿用本地历史扫描记录。</p><div id="totalScoreDetail"></div></section>
+    <section id="labelScoreSection" class="evidence" hidden><h3>大模型标注一致性评分</h3><div id="labelScoreDetail"></div></section>
+    <section class="evidence"><h3>原扫描触发依据</h3><div id="evidence"></div></section>
+    <section class="relations"><div id="relationButtons" class="relation-buttons"></div><p id="relationNote"></p><div id="related" class="related"></div><button id="moreRelated" hidden>加载更多对照</button></section>
+    <section id="differenceSection" class="difference" hidden><h3>两份标注的差异</h3><p id="differenceNote"></p><div id="differenceTables"></div></section>
+  </dialog>
+</body>
+</html>

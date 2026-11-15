@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>图像综合评分</title><style>
+:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#263445;background:#f3f5f8}body{margin:0;padding:28px;max-width:1600px;margin:auto}h1{font-size:25px;margin:0 0 8px}.muted{color:#68788b;font-size:13px}form,.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:22px 0}label{display:grid;gap:6px;font-size:13px}input,select,button{font:inherit;border:1px solid #ccd5df;border-radius:7px;padding:9px;background:white}input[type=number]{width:78px}button{background:#2358b8;color:white;cursor:pointer;border-color:#2358b8}button:disabled{opacity:.45}#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}.card{background:white;border:1px solid #dfe5ed;border-radius:12px;overflow:hidden;padding:14px}.image{width:100%;aspect-ratio:4/3;object-fit:contain;background:#edf1f5;border-radius:6px;cursor:zoom-in}.name{font-weight:600;overflow-wrap:anywhere;margin:12px 0 5px}.scores{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;margin-top:12px}.main{color:#2358b8;font-weight:700}.error{color:#b33232}details{font-size:12px;overflow-wrap:anywhere;margin-top:10px}dialog{width:min(1100px,92vw);border:0;border-radius:12px}dialog img{width:100%;max-height:80vh;object-fit:contain}dialog::backdrop{background:#0009}
+</style></head><body>
+<h1>图像综合评分</h1><div class="muted">0～5分连续评分，正常范围为5分。综合分按已有评分计算；评分覆盖率用于区分已完成图像评分和已接入标注评分的样本。</div>
+<form id="filters"><label>类别<select name="class" id="category"><option value="">全部类别</option></select></label>
+<label>评分指标<select name="field" id="field"></select></label>
+<label>最低分<input name="min" type="number" value="0" min="0" max="5" step="any"></label>
+<label>最高分<input name="max" type="number" value="5" min="0" max="5" step="any"></label>
+<label>评分覆盖率<select name="coverage"><option value="0">不限</option><option value="50">至少50%</option><option value="100">全部评分完成</option></select></label>
+<label>排序<select name="order"><option value="asc">低分优先</option><option value="desc">高分优先</option></select></label>
+<label>文件名<input name="query" placeholder="搜索原文件名"></label><button>筛选</button></form>
+<div id="status" class="muted"></div><div class="toolbar"><button id="prev">上一页</button><span id="page"></span><button id="next">下一页</button></div><div id="grid"></div>
+<dialog id="zoom"><button id="close">关闭</button><img alt="图片与标注框"></dialog>
+<script>
+const $=id=>document.getElementById(id);let page=0,fields=[],generation=0;
+async function api(url){const response=await fetch(url);const data=await response.json();if(!response.ok)throw Error(data.error);return data}
+function text(tag,value,cls){const node=document.createElement(tag);node.textContent=value;if(cls)node.className=cls;return node}
+async function draw(index,node,token){
+ const im=new Image();im.src='/api/image?id='+index;
+ try{const [boxes]=await Promise.all([api('/api/boxes?id='+index),im.decode()]);if(token!==generation)return;
+ const canvas=document.createElement('canvas');canvas.width=im.naturalWidth;canvas.height=im.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(im,0,0);
+ ctx.lineWidth=2;ctx.font='14px sans-serif';for(const box of boxes){const [x,y,r,b]=box.coords.map((v,i)=>v*(i%2?canvas.height:canvas.width));ctx.strokeStyle='#00d5ed';ctx.strokeRect(x,y,r-x,b-y);ctx.fillStyle='#003d50';ctx.fillRect(x,Math.max(0,y-18),ctx.measureText(box.class).width+8,18);ctx.fillStyle='white';ctx.fillText(box.class,x+4,Math.max(14,y-4))}
+ node.src=canvas.toDataURL('image/jpeg');node.onclick=()=>{$('zoom').querySelector('img').src=node.src;$('zoom').showModal()};
+ }catch(error){node.src=im.src;node.after(text('p',error.message,'error'))}
+}
+async function load(){const token=++generation;const params=new URLSearchParams(new FormData($('filters')));params.set('page',page);$('status').textContent='正在读取评分…';
+try{const data=await api('/api/samples?'+params);if(token!==generation)return;$('status').textContent=`匹配 ${data.total.toLocaleString()} 张 · 当前指标均分 ${data.mean??'—'}`;$('page').textContent=`第 ${page+1} / ${Math.max(1,Math.ceil(data.total/24))} 页`;$('prev').disabled=page===0;$('next').disabled=(page+1)*24>=data.total;$('grid').replaceChildren();
+for(const row of data.items){const card=text('article','','card'),im=text('img','','image');im.alt=row['原文件名'];card.append(im,text('div',row['原文件名'],'name'),text('div',row['类别']+' · 评分覆盖率 '+row['评分覆盖率(%)']+'%','muted'));const scores=text('div','','scores');for(const field of fields){scores.append(text('div',field+'：'+(row[field]||'待评分'),field==='综合质量分'?'main':''))}card.append(scores);const detail=text('details','');detail.append(text('summary','文件路径与样本ID'),text('p',row['图片路径']),text('p',row['样本ID']));card.append(detail);$('grid').append(card);draw(row.id,im,token)}
+}catch(error){$('status').textContent=error.message}}
+$('filters').onsubmit=e=>{e.preventDefault();page=0;load()};$('prev').onclick=()=>{page--;load()};$('next').onclick=()=>{page++;load()};$('close').onclick=()=>$('zoom').close();
+api('/api/meta').then(meta=>{fields=meta.fields;for(const name of meta.classes)$('category').add(new Option(name,name));for(const name of fields)$('field').add(new Option(name,name));load()}).catch(error=>$('status').textContent=error.message);
+</script></body></html>

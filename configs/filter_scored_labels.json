@@ -1,0 +1,9 @@
+{
+  "scores": "electronic_data/quality_scores_labels_v2",
+  "reports": "electronic_data/score_filter_labels_v2",
+  "split_output": "datasets/scored_filtered_labels_v2/seed_42",
+  "require_complete_scores": true,
+  "minimum_scores": {
+    "综合质量分": 2.5
+  }
+}

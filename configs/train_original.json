@@ -1,0 +1,25 @@
+{
+  "data": "/mnt/data/panjinduo/datasets/electronic_data/sample_original_named_seed42/data.yaml",
+  "model": "models/yolo26n.pt",
+  "output": "outputs/train_original_seed42_gpu2-3_batch256_20261111",
+  "parameters": {
+    "epochs": 200,
+    "imgsz": 640,
+    "batch": 256,
+    "device": "2,3",
+    "workers": 3,
+    "seed": 42,
+    "optimizer": "SGD",
+    "lr0": 0.01,
+    "patience": 20,
+    "amp": true,
+    "deterministic": true,
+    "cache": false
+  },
+  "prefetch_factor": 2,
+  "environment": {
+    "NCCL_P2P_DISABLE": "1",
+    "TORCH_NCCL_BLOCKING_WAIT": "0"
+  },
+  "log_interval_seconds": 30
+}
