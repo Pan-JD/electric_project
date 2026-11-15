@@ -1,0 +1,28 @@
+{
+  "data": "datasets/sample_scored_jyz_pl_v2/data.yaml",
+  "model": "models/yolo26n.pt",
+  "output": "outputs/train_jyz_pl_seed42",
+  "parameters": {
+    "epochs": 200,
+    "imgsz": 640,
+    "batch": 128,
+    "device": "0",
+    "workers": 4,
+    "seed": 42,
+    "classes": [2],
+    "single_cls": true,
+    "optimizer": "SGD",
+    "lr0": 0.01,
+    "patience": 40,
+    "val": true,
+    "amp": true,
+    "deterministic": true,
+    "cache": false
+  },
+  "prefetch_factor": 2,
+  "environment": {
+    "NCCL_P2P_DISABLE": "1",
+    "TORCH_NCCL_BLOCKING_WAIT": "0"
+  },
+  "log_interval_seconds": 30
+}

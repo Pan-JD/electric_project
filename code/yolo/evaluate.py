@@ -83,6 +83,17 @@ def evaluate_model(model, data, output='outputs/evaluate', split='val',
     detector = load_detector(model)
     if detector.task != 'detect':
         raise ValueError('当前评估脚本用于目标检测模型')
+    classes = dataset.get('classes')
+    single_cls = False
+    model_names = detector.names
+    source_names = dataset['names']
+    model_names = list(model_names.values()) if isinstance(model_names, dict) else model_names
+    if len(model_names) == 1 and len(source_names) > 1:
+        source_names = dict(enumerate(source_names)) if isinstance(source_names, list) else source_names
+        classes = [int(index) for index, name in source_names.items() if name == model_names[0]]
+        if len(classes) != 1:
+            raise ValueError(f'评估数据中无法唯一匹配模型类别：{model_names[0]}')
+        single_cls = True
     from ultralytics.utils.files import increment_path
 
     output = increment_path(resolve_path(output), mkdir=True)
@@ -93,14 +104,15 @@ def evaluate_model(model, data, output='outputs/evaluate', split='val',
                            device=None if device == 'auto' else device, workers=workers,
                            conf=conf, iou=iou, plots=True, verbose=True,
                            project=str(output.parent), name=output.name, exist_ok=True,
-                           classes=dataset.get('classes'))
-    details = write_detection_report(metrics, output, dataset.get('classes'))
+                           classes=classes, single_cls=single_cls)
+    details = write_detection_report(metrics, output, None if single_cls else classes)
     write_json(output/'最终指标.json', {
         'evaluation_weights':str(resolve_path(model)), 'data':str(resolve_path(data)), 'split':split,
         'evaluation_source':dataset[split],
         'metrics':{key:float(value) for key,value in metrics.results_dict.items()},
         'speed':{key:float(value) for key,value in metrics.speed.items()},
-        'parameters':{'imgsz':imgsz, 'batch':batch, 'conf':conf, 'iou':iou, 'device':device}, **details})
+        'parameters':{'imgsz':imgsz, 'batch':batch, 'conf':conf, 'iou':iou, 'device':device,
+                      'classes':classes, 'single_cls':single_cls}, **details})
     print(f'评估完成，结果保存在 {output}', flush=True)
     return output
 

@@ -30,7 +30,8 @@ def inspect_environment(project=None, with_ocr=True, gpu=False, module_available
     checks = []
     resources = [('YOLO源码', root/'code/yolo/ultralytics-yolo26/ultralytics/__init__.py'),
                  ('YOLO初始权重', root/'models/yolo26n.pt'),
-                 ('绘图字体', root/'assets/fonts/DejaVuSans.ttf')]
+                 ('绘图字体', root/'assets/fonts/DejaVuSans.ttf'),
+                 ('AMP检查图片', root/'code/yolo/ultralytics-yolo26/ultralytics/assets/bus.jpg')]
     if with_ocr:
         resources += [('OCR模型 '+name, root/'models/ocr'/name) for name in OCR_MODELS]
     for caption, path in resources:

@@ -322,9 +322,10 @@ def run_training(config, dry_run=False):
                 data=str(dataset_path), split=evaluation_split, imgsz=parameters['imgsz'],
                 batch=parameters['batch'], device=parameters['device'], workers=parameters['workers'],
                 seed=parameters['seed'], project=str(output), name='evaluation', exist_ok=False, plots=True,
-                classes=dataset.get('classes'))
+                classes=parameters.get('classes'), single_cls=parameters.get('single_cls', False))
             values = dict(metrics.results_dict)
-            details = write_detection_report(metrics, output/'evaluation', dataset.get('classes'))
+            report_classes = None if parameters.get('single_cls') else parameters.get('classes')
+            details = write_detection_report(metrics, output/'evaluation', report_classes)
             _write_json(output/'最终指标.json', {'metrics': values, 'evaluation_weights': str(selected),'split':evaluation_split,
                                               'data_split_seed':dataset.get('split_seed'),'training_seed':parameters['seed'],
                                               'data': str(data), 'output': str(output), **details})

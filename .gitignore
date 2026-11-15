@@ -1,7 +1,10 @@
 # 模型与文档
-models/**
+models/ocr/**
 Docs/**
 assets/**
+!/assets/fonts/
+!/assets/fonts/DejaVuSans.ttf
+!/assets/fonts/LICENSE_DEJAVU
 
 # 数据、评分结果、训练结果和临时归档
 /datasets/

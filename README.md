@@ -54,6 +54,7 @@ bash code/yolo/train_background.sh configs/train.json --logs
 ```
 
 - 训练完成后主要保留：
+```bash
 outputs/实验名称/
 ├── weights/
 │   ├── best.pt                # 验证集表现最好的模型
@@ -74,6 +75,7 @@ outputs/实验名称/
 logs/实验名称_时间.log          # 后台运行日志
 logs/实验名称_时间.pid          # 后台进程记录
 重新做实验前，修改配置中的 output，使用新的实验名称。已有输出目录会阻止重复启动。
+```
 
 ### S5：单独评估已有模型
 ```bash
@@ -97,6 +99,7 @@ python -u -B code/yolo/evaluate.py \
 ```
 
 - 评估结果目录：
+```bash
 outputs/评估名称/
 ├── 最终指标.json
 ├── 各类指标.csv
@@ -105,6 +108,7 @@ outputs/评估名称/
 ├── BoxF1_curve.png
 ├── …其他指标曲线和混淆矩阵
 └── val_batch*.jpg
+```
 
 ## S5 图像质量评分
 ### 评分运行指令，启动质量评分流程
@@ -118,6 +122,7 @@ python -u -B code/score_dataset.py --config configs/score.json
 ```
 - 输入数据集为/mnt/data/panjinduo/datasets/electronic_data/sample_filter_v1_hard_named_seed42
 - 输入为硬筛数据中的四类样本，评分结果保存在：
+```bash
 electronic_data/quality_scores_v2/
 ├── 逐图评分.csv
 ├── 类别评分统计.csv
@@ -126,6 +131,7 @@ electronic_data/quality_scores_v2/
 ├── 评分汇总.json
 └── _cache/experiment.sqlite
 - 评分规则、权重和统计区间均在 configs/score.json 中调整
+```
 
 ### 评分后划分新的训练数据与测试数据
 ```bash
@@ -190,14 +196,32 @@ bash code/yolo/train_background.sh configs/train_scored_labels.json
 python -B code/review_dataset_quality.py --results "run_results/quality_full_640_noocr_20261104" --quality-scores "electronic_data/quality_scores_v2"
 ```
 
+## 生成样本测试说明
+```bash
+# 可以在json文件中调整输入路径、输出目录、训练模型以及batchsize等参数，log日志在logs/目录下
+# batchsize256约需要40GB显存，目前代码支持多卡并行训练
+python -u -B code/yolo/train.py --config configs/train_jyz_pl.json
+```
+- 目录结构需要按如下排布：
+```bash
+electric_project/
+├── datasets/
+|    └── sample_scored_jyz_pl_v2/
+|       ├── data.yaml
+|       ├── train.txt
+|       ├── val.txt
+|       ├── images/
+|       ├── labels/
+|       └── annotations/
+└── models/
+    └── yolo26n.pt
+```
+## scp传输小文件太慢的问题
+```bash
+# 压缩打包
+tar -czf sample_scored_jyz_pl_v2.tar.gz sample_scored_jyz_pl_v2
 
-
-
-
-
-
-
-
-
-
+# 传输.tar.gz 文件后，在目标目录下解压
+tar -xzf sample_scored_jyz_pl_v2.tar.gz
+```
 

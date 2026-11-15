@@ -1,6 +1,6 @@
 # Python 3.10；本地 conda 环境 Yolov5 / S5 环境 Yolo。
-# 通用依赖：python -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-# 已有环境只需补齐缺项：python -B code/check_environment.py --gpu
+# YOLO训练依赖：python -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 训练环境检查：python -B code/check_environment.py --without-ocr
 # YOLO 使用 code/yolo/ultralytics-yolo26 内置源码。
 
 # 图像处理与结果展示
@@ -20,17 +20,12 @@ psutil>=5.8,<8
 polars>=0.20,<2
 ultralytics-thop>=2.0.18,<3
 
-# RapidOCR公共依赖；先安装本文件，再选择下方一种OCR后端。
-pyclipper>=1.2,<2
-Shapely>=1.7.1,!=2.0.4,<3
-six>=1.15,<2
-tqdm>=4.64,<5
-
 # OCR为单独安装步骤，已有可用OCR环境可跳过。
 # CPU OCR：
 # python -m pip install rapidocr-onnxruntime==1.4.4 "onnxruntime>=1.17,<2" -i https://pypi.tuna.tsinghua.edu.cn/simple
 # GPU OCR（CUDA 12 / cuDNN 9；本地已用 onnxruntime-gpu 1.23.2）：
 # python -m pip install "onnxruntime-gpu[cuda,cudnn]==1.23.2" "nvidia-cublas-cu12>=12,<13" -i https://pypi.tuna.tsinghua.edu.cn/simple
+# python -m pip install "pyclipper>=1.2,<2" "Shapely>=1.7.1,!=2.0.4,<3" "six>=1.15,<2" "tqdm>=4.64,<5" -i https://pypi.tuna.tsinghua.edu.cn/simple
 # python -m pip install rapidocr-onnxruntime==1.4.4 --no-deps -i https://pypi.tuna.tsinghua.edu.cn/simple
 # RapidOCR默认依赖CPU版onnxruntime；GPU方案用--no-deps安装RapidOCR。
 # ONNX Runtime保留CPU或GPU中的一个发行包，CUDA设备和实际后端在评分启动时检查。
