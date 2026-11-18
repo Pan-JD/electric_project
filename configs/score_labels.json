@@ -1,6 +1,6 @@
 {
   "input": "/mnt/data/panjinduo/datasets/electronic_data/sample_filter_v1_hard_named_seed42",
-  "output": "electronic_data/quality_scores_labels_v2",
+  "output": "electronic_data/quality_scores_labels_v3",
   "score_bins": [
     0,
     1,

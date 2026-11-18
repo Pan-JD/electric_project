@@ -28,7 +28,7 @@ from yolo.evaluate import EVALUATION_FILES, write_detection_report
 DEFAULT_PARAMETERS = {
     'epochs': 100, 'imgsz': 640, 'batch': 16, 'device': 'auto',
     'workers': 6, 'seed': 42, 'optimizer': 'SGD', 'lr0': .01,
-    'patience': 40, 'deterministic': True, 'amp': False, 'cache': False,
+    'patience': 40, 'deterministic': True, 'amp': False, 'cache': False, 'val': True,
 }
 CONTROLLED_PARAMETERS = {
     'data', 'model', 'project', 'name', 'exist_ok', 'resume', 'pretrained',
@@ -287,9 +287,9 @@ def run_training(config, dry_run=False):
             evaluation_split='test' if dataset.get('test') else 'val'
             train_test_only=evaluation_split=='test' and dataset.get('val')==dataset.get('train')
             if train_test_only:
-                # The independent test pool must never guide checkpoint selection.
-                # The YAML monitor points to training data; final scoring uses last.pt.
-                parameters['val']=False
+                if parameters['val']:
+                    raise ValueError('train与val指向同一组数据；开启每轮验证需要独立的val划分，请修正data.yaml')
+                # Explicit train/test-only runs use last.pt without checkpoint selection.
                 parameters['patience']=0
             if str(parameters.get('device')).lower() == 'auto':
                 torch = importlib.import_module('torch')
@@ -308,6 +308,7 @@ def run_training(config, dry_run=False):
             print(f"NCCL_P2P_DISABLE={runtime['NCCL_P2P_DISABLE']}；进度日志间隔 {runtime['log_interval_seconds']:g} 秒",flush=True)
             print(f"TORCH_NCCL_BLOCKING_WAIT={runtime['TORCH_NCCL_BLOCKING_WAIT']}",flush=True)
             print(f"数据加载 workers={runtime['workers']}，每个worker预取{runtime['prefetch_factor']}批",flush=True)
+            print('每轮验证：' + ('开启；按验证指标保存best.pt。' if parameters['val'] else '关闭；仅在训练结束时验证。'),flush=True)
             if parameters['patience']:
                 print(f"早停：验证集mAP50-95连续{parameters['patience']}轮无提升；最多{parameters['epochs']}轮。",flush=True)
             detector = ultralytics.YOLO(str(model))

@@ -1,7 +1,9 @@
 {
-  "scores": "electronic_data/quality_scores_labels_v2",
-  "reports": "electronic_data/score_filter_labels_v2",
-  "split_output": "datasets/scored_filtered_labels_v2/seed_42",
+  "scores": "electronic_data/quality_scores_labels_v3",
+  "reports": "electronic_data/score_filter_labels_v3",
+  "split_output": "datasets/scored_filtered_labels_v3/seed_42",
+  "dataset_output": "/mnt/data/panjinduo/datasets/electronic_data/sample_filter_v3_labels",
+  "export_workers": 4,
   "require_complete_scores": true,
   "minimum_scores": {
     "综合质量分": 2.5

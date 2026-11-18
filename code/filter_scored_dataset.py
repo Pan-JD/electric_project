@@ -3,16 +3,19 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import shutil
+import xml.etree.ElementTree as ET
 
 from simple_paths import load_json, resolve_path, write_json
 from score_dataset import _source_path
-from quality_logging import log, run_logging
+from quality_logging import log, progress_stage, run_logging, update_progress
 
 
 def write_text(path, text):
@@ -54,10 +57,62 @@ def write_training_labels(entries, source, splits, source_classes, classes):
             folder.rmdir()
 
 
+def export_dataset(entries, source, splits, output, classes, workers):
+    """Copy selected images and four-class labels, retaining names and split membership."""
+    output.mkdir(parents=True, exist_ok=False)
+
+    def copy(entry):
+        relative = entry['image'].relative_to(source / 'images')
+        target = output / 'images' / relative
+        label = relative.with_suffix('.txt')
+        xml = relative.with_suffix('.xml')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(entry['image'], target)
+        for kind, relative_label in (('labels', label), ('annotations', xml)):
+            (output / kind / relative_label).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(splits / 'labels' / label, output / 'labels' / label)
+        tree = ET.parse(source / 'annotations' / xml)
+        root = tree.getroot()
+        for obj in list(root.findall('object')):
+            if obj.findtext('name') not in classes:
+                root.remove(obj)
+        for node in root.findall('path'):
+            root.remove(node)
+        if root.find('filename') is not None:
+            root.find('filename').text = target.name
+        tree.write(output / 'annotations' / xml, encoding='utf-8', xml_declaration=True)
+        return {**entry, 'source_image': entry['image'], 'image': target}
+
+    copied = []
+    with progress_stage('复制综合评分筛选数据', len(entries)), ThreadPoolExecutor(max_workers=workers) as executor:
+        for completed, entry in enumerate(executor.map(copy, entries), 1):
+            copied.append(entry)
+            update_progress(completed)
+    for split in ('train', 'val'):
+        write_text(output / (split + '.txt'), ''.join(
+            './' + row['image'].relative_to(output).as_posix() + '\n'
+            for row in copied if row['split'] == split))
+    write_json(output / 'data.yaml', {'train': 'train.txt', 'val': 'val.txt', 'names': classes,
+                                      'preserve_manifest_order': True})
+    with (output / '样本对应表.csv').open('w', encoding='utf-8-sig', newline='') as stream:
+        writer = csv.writer(stream)
+        writer.writerow(['sample_id', 'split', 'category', 'image_path', 'label_path', 'source_image_path'])
+        for row in copied:
+            relative = row['image'].relative_to(output)
+            xml = (Path('annotations') / relative.relative_to('images')).with_suffix('.xml')
+            writer.writerow([row['uid'], row['split'], ';'.join(row['classes']), relative.as_posix(),
+                             xml.as_posix(), row['source_image'].as_posix()])
+    return copied
+
+
 def filter_scored(config):
     scores = resolve_path(config['scores'])
     reports = resolve_path(config['reports'])
     splits = resolve_path(config['split_output'])
+    dataset_output = resolve_path(config['dataset_output']) if config.get('dataset_output') else None
+    export_workers = config.get('export_workers', 4)
+    if not isinstance(export_workers, int) or isinstance(export_workers, bool) or export_workers < 1:
+        raise ValueError('export_workers须为正整数')
     score_config = load_json(scores / '评分配置.json')
     source = resolve_path(score_config['input'])
     score_csv = scores / '逐图评分.csv'
@@ -86,6 +141,13 @@ def filter_scored(config):
     for folder in (reports, splits):
         if folder == source or folder.is_relative_to(source):
             raise ValueError('筛选记录和图片列表请保存在项目目录')
+    if dataset_output:
+        for folder in (source, reports, splits):
+            if (dataset_output == folder or dataset_output.is_relative_to(folder)
+                    or folder.is_relative_to(dataset_output)):
+                raise ValueError('dataset_output须与输入数据和项目记录使用互不包含的新目录')
+        if dataset_output.exists():
+            raise ValueError(f'新数据集目录已存在，请使用新的dataset_output：{dataset_output}')
 
     lookup = {entry['uid']: entry for entry in paths['filtered_samples']}
     entries, decisions, seen = [], [], set()
@@ -143,7 +205,9 @@ def filter_scored(config):
                 'minimum_scores': minimum_scores, 'maximum_scores': maximum_scores,
                 'require_complete_scores': require_complete,
                 'score_sha256': hashlib.sha256(score_csv.read_bytes()).hexdigest(),
-                'split_policy': 'preserve_source_train_val', 'storage': 'reference'}
+                'dataset_output': str(dataset_output) if dataset_output else None,
+                'split_policy': 'preserve_source_train_val',
+                'storage': 'independent_copy' if dataset_output else 'reference'}
     marker = reports / '筛选配置.json'
     own_lists = marker.exists() and load_json(marker).get('split_output') == str(splits)
     if splits.exists() and any(splits.iterdir()) and not own_lists:
@@ -152,12 +216,16 @@ def filter_scored(config):
     write_json(reports / '筛选汇总.json', {'status': 'building', 'training_yaml': str(splits / 'data.yaml')})
 
     write_training_labels(entries, source, splits, paths['classes'], classes)
+    image_root, label_root = source / 'images', splits / 'labels'
+    if dataset_output:
+        entries = export_dataset(entries, source, splits, dataset_output, classes, export_workers)
+        image_root, label_root = dataset_output / 'images', dataset_output / 'labels'
     for split in ('train', 'val'):
         images = [entry['image'] for entry in entries if entry['split'] == split]
         write_text(splits / (split + '.txt'), ''.join(path.as_posix() + '\n' for path in images))
     write_json(splits / 'data.yaml', {'train': 'train.txt', 'val': 'val.txt', 'names': classes,
-                                     'image_root': (source / 'images').as_posix(),
-                                     'label_root': (splits / 'labels').as_posix(),
+                                     'image_root': image_root.as_posix(),
+                                     'label_root': label_root.as_posix(),
                                      'preserve_manifest_order': True})
     record = reports / '筛选记录.csv'
     with record.open('w', encoding='utf-8-sig', newline='') as stream:
@@ -167,11 +235,14 @@ def filter_scored(config):
     summary = {'input_images': len(decisions), 'kept_images': len(entries),
                'excluded_images': len(decisions) - len(entries), 'split_counts': dict(counts),
                'class_counts': dict(Counter(category for entry in entries for category in entry['classes'])),
-               'dataset': str(source), 'storage': 'reference_images_generated_labels',
+               'dataset': str(dataset_output or source), 'source_dataset': str(source),
+               'storage': 'independent_copy' if dataset_output else 'reference_images_generated_labels',
                'classes': classes, 'selected_class_ids': list(range(len(classes))),
                'require_complete_scores': require_complete,
                'training_yaml': str(splits / 'data.yaml'), 'status': 'complete'}
     write_json(reports / '筛选汇总.json', summary)
+    if dataset_output:
+        write_json(dataset_output / '导出汇总.json', summary)
     log(f'评分样本 {len(decisions):,} 张，训练引用 {counts["train"]:,} 张，验证引用 {counts["val"]:,} 张')
     log('训练配置：' + str(splits / 'data.yaml'))
     return summary

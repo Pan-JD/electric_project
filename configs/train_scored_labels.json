@@ -1,12 +1,12 @@
 {
-  "data": "datasets/scored_filtered_labels_v2/seed_42/data.yaml",
+  "data": "datasets/scored_filtered_labels_v3/seed_42/data.yaml",
   "model": "models/yolo26n.pt",
-  "output": "outputs/train_scored_labels_filtered_v2_seed42_gpu1_batch256",
+  "output": "outputs/train_scored_labels_v3_seed42_gpu3_batch256_20261117",
   "parameters": {
     "epochs": 200,
     "imgsz": 640,
     "batch": 256,
-    "device": "1",
+    "device": "3",
     "workers": 3,
     "seed": 42,
     "optimizer": "SGD",
@@ -15,7 +15,7 @@
     "amp": true,
     "deterministic": true,
     "cache": false,
-    "val": false
+    "val": true
   },
   "prefetch_factor": 2,
   "environment": {

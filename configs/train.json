@@ -14,7 +14,8 @@
     "patience": 20,
     "amp": true,
     "deterministic": true,
-    "cache": false
+    "cache": false,
+    "val": true
   },
   "prefetch_factor": 2,
   "environment": {
